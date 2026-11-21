@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Spin the Wheel - Win Instant Gifts!</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts matching the exact typography in the wheel image -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Kaushan+Script&family=Montserrat:wght@700;800;900&family=Pacifico&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Montserrat', sans-serif;
+      background: radial-gradient(circle at 50% 38%, #1e3a8a 0%, #0f172a 55%, #060b19 100%);
+      color: #ffffff;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Ambient stage spotlight beams */
+    .stage-glow {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 42%, rgba(56, 189, 248, 0.22) 0%, rgba(14, 165, 233, 0.05) 45%, transparent 72%),
+        repeating-conic-gradient(from 0deg at 50% 42%, rgba(255, 255, 255, 0.015) 0deg 10deg, transparent 10deg 20deg);
+      z-index: 0;
+    }
+
+    /* Wheel container sizing */
+    .wheel-stage {
+      position: relative;
+      width: min(92vw, 520px);
+      height: min(92vw, 520px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.65));
+    }
+
+    canvas#wheelCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 50%;
+    }
+
+    /* Interactive Center Hub Overlay Button */
+    .center-hub-btn {
+      position: absolute;
+      width: 31%;
+      height: 31%;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 35% 28%, #3b82f6 0%, #1d4ed8 42%, #1e3a8a 78%, #0f172a 100%);
+      box-shadow:
+        0 0 0 4px #e0f2fe,
+        0 0 0 8px #0284c7,
+        0 12px 24px rgba(0, 0, 0, 0.65),
+        inset 0 6px 14px rgba(255, 255, 255, 0.55),
+        inset 0 -8px 16px rgba(2, 6, 23, 0.8);
+      transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.16s ease;
+      z-index: 20;
+      padding: 4px;
+    }
+
+    .center-hub-btn::before {
+      content: '';
+      position: absolute;
+      top: 6%;
+      left: 14%;
+      right: 14%;
+      height: 34%;
+      border-radius: 50%;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 100%);
+      pointer-events: none;
+    }
+
+    .center-hub-btn:hover:not(:disabled) {
+      transform: scale(1.06);
+      box-shadow:
+        0 0 0 4px #ffffff,
+        0 0 0 9px #38bdf8,
+        0 0 28px rgba(56, 189, 248, 0.75),
+        0 14px 28px rgba(0, 0, 0, 0.7),
+        inset 0 6px 14px rgba(255, 255, 255, 0.65),
+        inset 0 -8px 16px rgba(2, 6, 23, 0.8);
+    }
+
+    .center-hub-btn:active:not(:disabled) {
+      transform: scale(0.95);
+    }
+
+    .center-hub-btn:disabled {
+      cursor: not-allowed;
+    }
+
+    .hub-spin-the {
+      font-family: 'Kaushan Script', 'Pacifico', cursive;
+      font-size: clamp(1rem, 4.4vw, 1.55rem);
+      line-height: 1;
+      color: #ffffff;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.65);
+      transform: rotate(-4deg);
+      margin-bottom: -2px;
+    }
+
+    .hub-wheel {
+      font-family: 'Anton', Impact, sans-serif;
+      font-size: clamp(1.35rem, 6.2vw, 2.25rem);
+      line-height: 1;
+      letter-spacing: 0.04em;
+      color: #ffffff;
+      text-shadow: 0 3px 8px rgba(0, 0, 0, 0.75);
+      transform: rotate(-3deg);
+    }
+
+    /* Top Pointer / Ticker */
+    .pointer-wrapper {
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      width: 54px;
+      height: 66px;
+      pointer-events: none;
+      transform-origin: 50% 18px;
+      filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.6));
+    }
+
+    /* Primary Spin Button below wheel */
+    .spin-action-btn {
+      background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 52%, #d97706 100%);
+      color: #1e1b4b;
+      border: 3px solid #fef3c7;
+      box-shadow:
+        0 6px 0 #92400e,
+        0 12px 24px rgba(245, 158, 11, 0.45);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.15s ease;
+    }
+
+    .spin-action-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      filter: brightness(1.06);
+      box-shadow:
+        0 8px 0 #92400e,
+        0 16px 28px rgba(245, 158, 11, 0.6);
+    }
+
+    .spin-action-btn:active:not(:disabled) {
+      transform: translateY(4px);
+      box-shadow:
+        0 2px 0 #92400e,
+        0 6px 14px rgba(245, 158, 11, 0.4);
+    }
+
+    .spin-action-btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: translateY(2px);
+      box-shadow: 0 3px 0 #92400e;
+    }
+
+    /* Confetti Canvas */
+    #confettiCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 60;
+    }
+
+    /* Modal Pop Animation */
+    @keyframes modalPop {
+      0% {
+        opacity: 0;
+        transform: scale(0.75) translateY(20px);
+      }
+      70% {
+        opacity: 1;
+        transform: scale(1.03) translateY(-2px);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .modal-animate {
+      animation: modalPop 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+  </style>
+</head>
+<body class="px-3 py-4 sm:py-6">
+  <div class="stage-glow"></div>
+  <canvas id="confettiCanvas"></canvas>
+
+  <!-- Top Controls & Header -->
+  <header class="relative z-20 w-full max-w-2xl flex flex-wrap items-center justify-between gap-2 px-2">
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-amber-400/20 border border-amber-300/40 text-amber-300 text-lg shadow">
+        🎡
+      </span>
+      <div>
+        <h1 class="text-base sm:text-xl font-black tracking-wide uppercase text-white leading-tight">
+          Spin &amp; Win
+        </h1>
+        <p class="text-[11px] sm:text-xs text-sky-200/80 font-semibold">
+          Click the center hub or press Spin!
+        </p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <!-- Shuffle Slices Button -->
+      <button
+        id="shuffleBtn"
+        type="button"
+        title="Randomly rearrange the 8 gifts on the wheel"
+        class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/20 text-xs sm:text-sm font-bold text-sky-100 backdrop-blur-md transition flex items-center gap-1.5 shadow"
+      >
+        <span>🔀</span>
+        <span>Shuffle Gifts</span>
+      </button>
+
+      <!-- Sound Mute/Unmute Toggle -->
+      <button
+        id="soundToggleBtn"
+        type="button"
+        aria-label="Toggle Sound"
+        class="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/20 text-white backdrop-blur-md transition shadow"
+      >
+        <svg id="soundOnIcon" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11 5L6 9H2v6h4l5 4V5z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" />
+        </svg>
+        <svg id="soundOffIcon" class="w-5 h-5 hidden text-rose-300" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Center Stage: The Wheel -->
+  <main class="relative z-10 flex flex-col items-center justify-center my-auto py-3">
+    <div class="wheel-stage" id="wheelStage">
+      <!-- Top Metallic Ticker / Pointer -->
+      <div class="pointer-wrapper" id="wheelPointer">
+        <svg viewBox="0 0 60 74" class="w-full h-full overflow-visible">
+          <defs>
+            <linearGradient id="ptrGold" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#fef08a" />
+              <stop offset="45%" stop-color="#f59e0b" />
+              <stop offset="100%" stop-color="#b45309" />
+            </linearGradient>
+            <linearGradient id="ptrRed" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#ef4444" />
+              <stop offset="100%" stop-color="#991b1b" />
+            </linearGradient>
+          </defs>
+          <!-- Pointer body -->
+          <path d="M30 72 L8 24 A22 22 0 1 1 52 24 Z" fill="url(#ptrGold)" stroke="#ffffff" stroke-width="2.5" />
+          <path d="M30 62 L14 25 A16 16 0 1 1 46 25 Z" fill="url(#ptrRed)" />
+          <!-- Rivet center -->
+          <circle cx="30" cy="21" r="7" fill="url(#ptrGold)" stroke="#78350f" stroke-width="1.5" />
+          <circle cx="28" cy="19" r="2.2" fill="#ffffff" opacity="0.8" />
+        </svg>
+      </div>
+
+      <!-- High-DPI Canvas Wheel -->
+      <canvas id="wheelCanvas"></canvas>
+
+      <!-- Interactive Center "Spin the WHEEL" Hub Button -->
+      <button
+        id="centerSpinBtn"
+        type="button"
+        class="center-hub-btn"
+        aria-label="Spin the Wheel"
+      >
+        <span class="hub-spin-the">Spin the</span>
+        <span class="hub-wheel">WHEEL</span>
+      </button>
+    </div>
+
+    <!-- Bottom Controls Bar -->
+    <div class="mt-6 flex flex-col items-center gap-3 w-full max-w-md px-2">
+      <button
+        id="mainSpinBtn"
+        type="button"
+        class="spin-action-btn w-full sm:w-72 py-3.5 px-8 rounded-2xl font-black text-lg sm:text-xl tracking-wider uppercase cursor-pointer"
+      >
+        SPIN THE WHEEL
+      </button>
+
+      <!-- Auto-Shuffle Toggle Option -->
+      <label class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs sm:text-sm text-sky-100 cursor-pointer hover:bg-white/15 transition">
+        <input
+          id="autoShuffleCheckbox"
+          type="checkbox"
+          checked
+          class="w-4 h-4 accent-amber-400 rounded cursor-pointer"
+        />
+        <span class="font-semibold">Randomize gift order on every spin</span>
+      </label>
+    </div>
+  </main>
+
+  <!-- Subtle Footer Status -->
+  <footer class="relative z-20 text-center text-[11px] sm:text-xs text-sky-200/60 pb-1">
+    Press <kbd class="px-1.5 py-0.5 bg-white/10 rounded border border-white/20 text-white font-mono">Space</kbd> or tap the wheel to spin
+  </footer>
+
+  <!-- Result Popup Modal -->
+  <div
+    id="resultModal"
+    class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm"
+    role="dialog"
+    aria-modal="true"
+  >
+    <div
+      id="resultCard"
+      class="modal-animate relative w-full max-w-sm rounded-3xl p-6 sm:p-7 text-center border-2 shadow-2xl overflow-hidden"
+      style="background: linear-gradient(160deg, #1e3a8a 0%, #0f172a 100%); border-color: #38bdf8;"
+    >
+      <!-- Top Decorative Badge -->
+      <div
+        id="resultIconBadge"
+        class="mx-auto mb-3 w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-lg border-4 border-white/80"
+        style="background: radial-gradient(circle, #fde047, #f59e0b);"
+      >
+        🎁
+      </div>
+
+      <p
+        id="resultHeaderLabel"
+        class="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-amber-300 mb-1"
+      >
+        Congratulations! You Won
+      </p>
+
+      <h2
+        id="resultTitle"
+        class="text-3xl sm:text-4xl font-black tracking-tight text-white drop-shadow mb-1"
+      >
+        JUJU Dahi
+      </h2>
+
+      <p
+        id="resultSubtitle"
+        class="text-sm sm:text-base font-bold text-sky-200 mb-6"
+      >
+        Delicious Traditional Yogurt
+      </p>
+
+      <button
+        id="modalSpinAgainBtn"
+        type="button"
+        class="spin-action-btn w-full py-3.5 px-6 rounded-2xl font-black text-base sm:text-lg uppercase tracking-wider cursor-pointer"
+      >
+        SPIN AGAIN
+      </button>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * Exact 8 Slices recreated faithfully from the uploaded image:
+     * Clockwise starting from Top (12 o'clock = -90deg in canvas coordinates):
+     * 0: Top-Right     -> BAM BAM (Refreshing Drink)
+     * 1: Upper-Right   -> JUJU Dahi
+     * 2: Lower-Right   -> TRY AGAIN
+     * 3: Bottom-Right  -> MAX TIGER (Energy Drink)
+     * 4: Bottom-Left   -> SPA ((Enter the lucky draw))
+     * 5: Lower-Left    -> JUJU Dahi
+     * 6: Upper-Left    -> XTREME (Energy Drink)
+     * 7: Top-Left      -> JUJU Dahi
+     */
+    const ORIGINAL_SLICES = [
+      {
+        id: 'bam-bam',
+        type: 'bam-bam',
+        title: 'BAM BAM',
+        subtitle: 'Refreshing Drink',
+        isWin: true,
+        emoji: '🥤',
+        gradInner: '#5ce1e6',
+        gradOuter: '#38b6ff',
+        modalAccent: '#fb923c'
+      },
+      {
+        id: 'juju-1',
+        type: 'juju',
+        title: 'JUJU',
+        subtitle: 'Dahi',
+        isWin: true,
+        emoji: '🥣',
+        gradInner: '#c1ff72',
+        gradOuter: '#9be15d',
+        modalAccent: '#38bdf8'
+      },
+      {
+        id: 'try-again',
+        type: 'try-again',
+        title: 'TRY AGAIN',
+        subtitle: 'So close! Give it another spin!',
+        isWin: false,
+        emoji: '🔄',
+        gradInner: '#43e97b',
+        gradOuter: '#38f9d7',
+        modalAccent: '#f87171'
+      },
+      {
+        id: 'max-tiger',
+        type: 'max-tiger',
+        title: 'MAX TIGER',
+        subtitle: 'Energy Drink',
+        isWin: true,
+        emoji: '⚡',
+        gradInner: '#7ed957',
+        gradOuter: '#38b6ff',
+        modalAccent: '#facc15'
+      },
+      {
+        id: 'spa',
+        type: 'spa',
+        title: 'SPA',
+        subtitle: '(Enter the lucky draw)',
+        isWin: true,
+        emoji: '🎟️',
+        gradInner: '#ffde59',
+        gradOuter: '#7ed957',
+        modalAccent: '#fb923c'
+      },
+      {
+        id: 'juju-2',
+        type: 'juju',
+        title: 'JUJU',
+        subtitle: 'Dahi',
+        isWin: true,
+        emoji: '🥣',
+        gradInner: '#fff200',
+        gradOuter: '#ffd200',
+        modalAccent: '#38bdf8'
+      },
+      {
+        id: 'xtreme',
+        type: 'xtreme',
+        title: 'XTREME',
+        subtitle: 'Energy Drink',
+        isWin: true,
+        emoji: '🔋',
+        gradInner: '#7ce8ff',
+        gradOuter: '#4facfe',
+        modalAccent: '#60a5fa'
+      },
+      {
+        id: 'juju-3',
+        type: 'juju',
+        title: 'JUJU',
+        subtitle: 'Dahi',
+        isWin: true,
+        emoji: '🥣',
+        gradInner: '#5ce1e6',
+        gradOuter: '#38ef7d',
+        modalAccent: '#38bdf8'
+      }
+    ];
+
+    // Current active slice order (initialized to exact image layout, shuffled on demand/spin)
+    let slices = ORIGINAL_SLICES.map(item => ({ ...item }));
+
+    // Wheel Physics & Animation State
+    const SLICE_COUNT = 8;
+    const SLICE_ARC = (Math.PI * 2) / SLICE_COUNT; // 45 degrees in radians
+    const BULB_COUNT = 28;
+
+    let currentRotation = 0; // Radians
+    let isSpinning = false;
+    let pointerBounceAngle = 0;
+    let pointerVelocity = 0;
+    let lastPegIndex = -1;
+    let bulbPhase = 0;
+    let lastFrameTime = performance.now();
+    let soundEnabled = true;
+
+    // DOM Elements
+    const wheelCanvas = document.getElementById('wheelCanvas');
+    const ctx = wheelCanvas.getContext('2d');
+    const wheelPointer = document.getElementById('wheelPointer');
+    const centerSpinBtn = document.getElementById('centerSpinBtn');
+    const mainSpinBtn = document.getElementById('mainSpinBtn');
+    const shuffleBtn = document.getElementById('shuffleBtn');
+    const autoShuffleCheckbox = document.getElementById('autoShuffleCheckbox');
+    const soundToggleBtn = document.getElementById('soundToggleBtn');
+    const soundOnIcon = document.getElementById('soundOnIcon');
+    const soundOffIcon = document.getElementById('soundOffIcon');
+    const resultModal = document.getElementById('resultModal');
+    const resultCard = document.getElementById('resultCard');
+    const resultIconBadge = document.getElementById('resultIconBadge');
+    const resultHeaderLabel = document.getElementById('resultHeaderLabel');
+    const resultTitle = document.getElementById('resultTitle');
+    const resultSubtitle = document.getElementById('resultSubtitle');
+    const modalSpinAgainBtn = document.getElementById('modalSpinAgainBtn');
+
+    // Web Audio API Synthesizer (Zero external sound files)
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+          audioCtx = new AudioContext();
+        }
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playTickSound(speedRatio = 1) {
+      if (!soundEnabled) return;
+      initAudio();
+      if (!audioCtx) return;
+
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'triangle';
+      const baseFreq = 620 + Math.min(speedRatio * 260, 320);
+      osc.frequency.setValueAtTime(baseFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(160, now + 0.045);
+
+      gain.gain.setValueAtTime(0.16, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.05);
+    }
+
+    function playWinFanfare() {
+      if (!soundEnabled) return;
+      initAudio();
+      if (!audioCtx) return;
+
+      const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+      const now = audioCtx.currentTime;
+
+      notes.forEach((freq, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        const start = now + idx * 0.09;
+        osc.frequency.setValueAtTime(freq, start);
+
+        gain.gain.setValueAtTime(0.001, start);
+        gain.gain.linearRampToValueAtTime(0.22, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.45);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(start);
+        osc.stop(start + 0.48);
+      });
+    }
+
+    function playTryAgainTone() {
+      if (!soundEnabled) return;
+      initAudio();
+      if (!audioCtx) return;
+
+      const notes = [392.00, 349.23, 311.13]; // G4, F4, Eb4
+      const now = audioCtx.currentTime;
+
+      notes.forEach((freq, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        const start = now + idx * 0.14;
+        osc.frequency.setValueAtTime(freq, start);
+
+        gain.gain.setValueAtTime(0.18, start);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.32);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(start);
+        osc.stop(start + 0.35);
+      });
+    }
+
+    /**
+     * Cryptographically unbiased random float in [0, 1)
+     */
+    function secureRandom() {
+      if (window.crypto && window.crypto.getRandomValues) {
+        const arr = new Uint32Array(1);
+        window.crypto.getRandomValues(arr);
+        return arr[0] / 4294967296;
+      }
+      return Math.random();
+    }
+
+    /**
+     * Fisher-Yates shuffle to randomize slice positions while keeping the exact 8 gifts
+     */
+    function shuffleSlicesArray() {
+      for (let i = slices.length - 1; i > 0; i--) {
+        const j = Math.floor(secureRandom() * (i + 1));
+        const temp = slices[i];
+        slices[i] = slices[j];
+        slices[j] = temp;
+      }
+    }
+
+    /**
+     * High-DPI Canvas Resize
+     */
+    function resizeWheelCanvas() {
+      const stage = document.getElementById('wheelStage');
+      const rect = stage.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 3);
+      wheelCanvas.width = Math.round(rect.width * dpr);
+      wheelCanvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    /**
+     * Draw an individual slice's custom typography matching the reference image
+     */
+    function drawSliceContent(ctx, slice, radius) {
+      ctx.save();
+      // Rotate into center of the slice, orienting text upright relative to outer rim
+      ctx.rotate(SLICE_ARC / 2);
+      ctx.translate(radius * 0.63, 0);
+      ctx.rotate(Math.PI / 2);
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineJoin = 'round';
+      ctx.miterLimit = 2;
+
+      const scale = radius / 230; // Normalized against 460px design radius
+
+      if (slice.type === 'bam-bam') {
+        // "BAM BAM" in bold orange block letters with dark drop shadow
+        ctx.font = `900 ${Math.round(25 * scale)}px 'Anton', Impact, sans-serif`;
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText('BAM BAM', 2 * scale, -8 * scale);
+        ctx.fillStyle = '#f97316';
+        ctx.fillText('BAM BAM', 0, -10 * scale);
+
+        // "Refreshing Drink" in bold white with dark outline
+        ctx.font = `800 ${Math.round(13.5 * scale)}px 'Montserrat', sans-serif`;
+        ctx.lineWidth = 3.5 * scale;
+        ctx.strokeStyle = '#0f172a';
+        ctx.strokeText('Refreshing Drink', 0, 14 * scale);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('Refreshing Drink', 0, 14 * scale);
+
+      } else if (slice.type === 'juju') {
+        // "JUJU" in flowing script font (light blue fill with crisp white outline & shadow)
+        ctx.save();
+        ctx.translate(0, -14 * scale);
+        ctx.rotate(-0.08);
+        ctx.font = `400 ${Math.round(36 * scale)}px 'Pacifico', 'Kaushan Script', cursive`;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+        ctx.shadowBlur = 4 * scale;
+        ctx.shadowOffsetY = 2 * scale;
+        ctx.lineWidth = 5 * scale;
+        ctx.strokeStyle = '#ffffff';
+        ctx.strokeText('JUJU', 0, 0);
+        ctx.shadowColor = 'transparent';
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText('JUJU', 0, 0);
+        ctx.restore();
+
+        // "Dahi" below in bold white sans-serif with black outline
+        ctx.font = `900 ${Math.round(20 * scale)}px 'Montserrat', sans-serif`;
+        ctx.lineWidth = 4.5 * scale;
+        ctx.strokeStyle = '#000000';
+        ctx.strokeText('Dahi', 0, 18 * scale);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('Dahi', 0, 18 * scale);
+
+      } else if (slice.type === 'try-again') {
+        // "TRY" / "AGAIN" stacked in bold red block letters with crisp white outline
+        ctx.font = `900 ${Math.round(28 * scale)}px 'Anton', Impact, sans-serif`;
+        ctx.lineWidth = 4.5 * scale;
+        ctx.strokeStyle = '#ffffff';
+        ctx.strokeText('TRY', 0, -13 * scale);
+        ctx.fillStyle = '#dc2626';
+        ctx.fillText('TRY', 0, -13 * scale);
+
+        ctx.strokeText('AGAIN', 0, 16 * scale);
+        ctx.fillStyle = '#dc2626';
+        ctx.fillText('AGAIN', 0, 16 * scale);
+
+      } else if (slice.type === 'max-tiger') {
+        // "MAX TIGER" in bold yellow-gold block letters with dark outline
+        ctx.font = `900 ${Math.round(23.5 * scale)}px 'Anton', Impact, sans-serif`;
+        ctx.lineWidth = 4 * scale;
+        ctx.strokeStyle = '#0f172a';
+        ctx.strokeText('MAX TIGER', 0, -8 * scale);
+        ctx.fillStyle = '#facc15';
+        ctx.fillText('MAX TIGER', 0, -8 * scale);
+
+        // "Energy Drink" in bold white with black outline
+        ctx.font = `800 ${Math.round(14.5 * scale)}px 'Montserrat', sans-serif`;
+        ctx.lineWidth = 3.8 * scale;
+        ctx.strokeStyle = '#000000';
+        ctx.strokeText('Energy Drink', 0, 15 * scale);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('Energy Drink', 0, 15 * scale);
+
+      } else if (slice.type === 'spa') {
+        // "SPA" in large bold peach-orange block letters with dark outline
+        ctx.font = `900 ${Math.round(35 * scale)}px 'Anton', Impact, sans-serif`;
+        ctx.lineWidth = 4.5 * scale;
+        ctx.strokeStyle = '#000000';
+        ctx.strokeText('SPA', 0, -10 * scale);
+        ctx.fillStyle = '#fb923c';
+        ctx.fillText('SPA', 0, -10 * scale);
+
+        // "(Enter the lucky draw)" in small bold white with black outline
+        ctx.font = `800 ${Math.round(11.2 * scale)}px 'Montserrat', sans-serif`;
+        ctx.lineWidth = 3.2 * scale;
+        ctx.strokeStyle = '#000000';
+        ctx.strokeText('(Enter the lucky draw)', 0, 16 * scale);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('(Enter the lucky draw)', 0, 16 * scale);
+
+      } else if (slice.type === 'xtreme') {
+        // "XTREME" in bold deep-royal-blue block letters
+        ctx.font = `900 ${Math.round(26 * scale)}px 'Anton', Impact, sans-serif`;
+        ctx.fillStyle = '#1e1b9b';
+        ctx.fillText('XTREME', 0, -9 * scale);
+
+        // "Energy Drink" in bold white with black outline
+        ctx.font = `800 ${Math.round(14.5 * scale)}px 'Montserrat', sans-serif`;
+        ctx.lineWidth = 3.8 * scale;
+        ctx.strokeStyle = '#000000';
+        ctx.strokeText('Energy Drink', 0, 14 * scale);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('Energy Drink', 0, 14 * scale);
+      }
+
+      ctx.restore();
+    }
+
+    /**
+     * Render the complete Wheel (Outer metallic bezel, marquee bulbs, 8 slices, glossy dividers)
+     */
+    function renderWheel() {
+      const width = wheelCanvas.clientWidth;
+      const height = wheelCanvas.clientHeight;
+      if (!width || !height) return;
+
+      const cx = width / 2;
+      const cy = height / 2;
+      const outerRadius = Math.min(cx, cy) - 4;
+      const bezelThickness = outerRadius * 0.115;
+      const wheelRadius = outerRadius - bezelThickness;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // 1. Outer Metallic Silver-Blue Rim
+      const rimGrad = ctx.createLinearGradient(0, 0, width, height);
+      rimGrad.addColorStop(0, '#e2e8f0');
+      rimGrad.addColorStop(0.25, '#334155');
+      rimGrad.addColorStop(0.5, '#cbd5e1');
+      rimGrad.addColorStop(0.75, '#1e293b');
+      rimGrad.addColorStop(1, '#94a3b8');
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, outerRadius, 0, Math.PI * 2);
+      ctx.fillStyle = rimGrad;
+      ctx.fill();
+
+      // Dark Navy Marquee Bulb Track
+      const trackOuter = outerRadius - outerRadius * 0.018;
+      const trackInner = wheelRadius + outerRadius * 0.015;
+      const trackGrad = ctx.createRadialGradient(cx, cy, trackInner, cx, cy, trackOuter);
+      trackGrad.addColorStop(0, '#0f172a');
+      trackGrad.addColorStop(0.5, '#1e3a8a');
+      trackGrad.addColorStop(1, '#090d16');
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, trackOuter, 0, Math.PI * 2);
+      ctx.fillStyle = trackGrad;
+      ctx.fill();
+
+      // Inner metallic ring border around the slices
+      ctx.beginPath();
+      ctx.arc(cx, cy, wheelRadius + outerRadius * 0.015, 0, Math.PI * 2);
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fill();
+
+      // 2. Rotating Wheel Slices
+      ctx.save();
+      ctx.translate(cx, cy);
+      // Offset by -PI/2 so slice index 0 begins right at 12 o'clock when currentRotation == 0
+      ctx.rotate(currentRotation - Math.PI / 2);
+
+      for (let i = 0; i < SLICE_COUNT; i++) {
+        const startAngle = i * SLICE_ARC;
+        const endAngle = startAngle + SLICE_ARC;
+        const slice = slices[i];
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, wheelRadius, startAngle, endAngle);
+        ctx.closePath();
+
+        // Radial gradient fill for vibrant slice appearance
+        const grad = ctx.createRadialGradient(0, 0, wheelRadius * 0.15, 0, 0, wheelRadius);
+        grad.addColorStop(0, slice.gradInner);
+        grad.addColorStop(1, slice.gradOuter);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // Subtle inner glossy highlight along outer edge of slice
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.stroke();
+
+        // Rotate to slice's start angle and draw text
+        ctx.rotate(startAngle);
+        drawSliceContent(ctx, slice, wheelRadius);
+        ctx.restore();
+      }
+
+      // 3. Glossy Teal / Metallic Slice Dividers & Rim Pegs
+      for (let i = 0; i < SLICE_COUNT; i++) {
+        const angle = i * SLICE_ARC;
+        ctx.save();
+        ctx.rotate(angle);
+
+        // Divider bar shadow
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(wheelRadius, 0);
+        ctx.lineWidth = Math.max(5, wheelRadius * 0.026);
+        ctx.strokeStyle = '#0f766e';
+        ctx.stroke();
+
+        // Glossy highlight core of divider
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(wheelRadius, 0);
+        ctx.lineWidth = Math.max(2, wheelRadius * 0.011);
+        ctx.strokeStyle = '#a5f3fc';
+        ctx.stroke();
+
+        // Metallic peg pin near outer rim (triggers pointer tick)
+        const pegR = Math.max(3.5, wheelRadius * 0.018);
+        ctx.beginPath();
+        ctx.arc(wheelRadius - pegR * 1.4, 0, pegR, 0, Math.PI * 2);
+        ctx.fillStyle = '#f8fafc';
+        ctx.fill();
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = '#0e7490';
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      ctx.restore();
+
+      // 4. Inner Center Shadow Ring (under the HTML center button)
+      ctx.beginPath();
+      ctx.arc(cx, cy, wheelRadius * 0.36, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.35)';
+      ctx.fill();
+
+      // 5. Animated Warm-White / Gold Marquee Bulbs around the bezel
+      const bulbRingRadius = (trackOuter + trackInner) / 2;
+      const bulbRadius = Math.max(4.5, bezelThickness * 0.24);
+      const activePattern = Math.floor(bulbPhase);
+
+      for (let b = 0; b < BULB_COUNT; b++) {
+        const theta = (b / BULB_COUNT) * Math.PI * 2 - Math.PI / 2;
+        const bx = cx + Math.cos(theta) * bulbRingRadius;
+        const by = cy + Math.sin(theta) * bulbRingRadius;
+
+        // Alternating chase effect
+        const isLit = (b + activePattern) % 2 === 0;
+
+        ctx.save();
+        if (isLit) {
+          // Warm golden glow halo
+          const glow = ctx.createRadialGradient(bx, by, bulbRadius * 0.2, bx, by, bulbRadius * 2.2);
+          glow.addColorStop(0, 'rgba(254, 249, 195, 0.95)');
+          glow.addColorStop(0.5, 'rgba(251, 191, 36, 0.55)');
+          glow.addColorStop(1, 'rgba(251, 191, 36, 0)');
+          ctx.beginPath();
+          ctx.arc(bx, by, bulbRadius * 2.2, 0, Math.PI * 2);
+          ctx.fillStyle = glow;
+          ctx.fill();
+        }
+
+        // Bulb glass dome
+        const bulbGrad = ctx.createRadialGradient(
+          bx - bulbRadius * 0.25,
+          by - bulbRadius * 0.25,
+          bulbRadius * 0.1,
+          bx,
+          by,
+          bulbRadius
+        );
+        if (isLit) {
+          bulbGrad.addColorStop(0, '#ffffff');
+          bulbGrad.addColorStop(0.6, '#fef08a');
+          bulbGrad.addColorStop(1, '#f59e0b');
+        } else {
+          bulbGrad.addColorStop(0, '#fef3c7');
+          bulbGrad.addColorStop(0.6, '#d97706');
+          bulbGrad.addColorStop(1, '#78350f');
+        }
+
+        ctx.beginPath();
+        ctx.arc(bx, by, bulbRadius, 0, Math.PI * 2);
+        ctx.fillStyle = bulbGrad;
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    /**
+     * Determine which slice is currently under the top 12 o'clock pointer
+     */
+    function getWinningSlice() {
+      const twoPi = Math.PI * 2;
+      // Normalize currentRotation into [0, 2*PI)
+      const normalizedRot = ((currentRotation % twoPi) + twoPi) % twoPi;
+      // Angle on the wheel directly under 12 o'clock
+      const pointerAngleOnWheel = (twoPi - normalizedRot) % twoPi;
+      const winningIndex = Math.floor(pointerAngleOnWheel / SLICE_ARC) % SLICE_COUNT;
+      return slices[winningIndex];
+    }
+
+    /**
+     * Smooth Quintic Ease-Out for realistic wheel deceleration
+     */
+    function easeOutQuint(t) {
+      return 1 - Math.pow(1 - t, 5);
+    }
+
+    /**
+     * Trigger a Spin!
+     */
+    function startSpin() {
+      if (isSpinning) return;
+      initAudio();
+
+      // Hide modal if open
+      resultModal.classList.add('hidden');
+      resultModal.classList.remove('flex');
+
+      // If "Randomize gift order on every spin" is enabled, shuffle the 8 gifts randomly
+      if (autoShuffleCheckbox.checked) {
+        shuffleSlicesArray();
+      }
+
+      isSpinning = true;
+      centerSpinBtn.disabled = true;
+      mainSpinBtn.disabled = true;
+      shuffleBtn.disabled = true;
+
+      // Choose an unbiased random target angle + 6 to 9 full spins
+      const extraSpins = 6 + Math.floor(secureRandom() * 4); // 6, 7, 8, or 9 full rotations
+      const randomSliceOffset = secureRandom() * Math.PI * 2;
+
+      // Avoid landing dead-center on a thin divider line (keep safe margin inside slice)
+      const sliceLocalPos = randomSliceOffset % SLICE_ARC;
+      const margin = SLICE_ARC * 0.12;
+      let safeOffset = randomSliceOffset;
+      if (sliceLocalPos < margin) {
+        safeOffset += margin;
+      } else if (sliceLocalPos > SLICE_ARC - margin) {
+        safeOffset -= margin;
+      }
+
+      const startRotation = currentRotation;
+      const targetRotation = startRotation + extraSpins * Math.PI * 2 + safeOffset;
+      const duration = 4800 + secureRandom() * 900; // 4.8s to 5.7s
+      const startTime = performance.now();
+
+      lastPegIndex = Math.floor(((currentRotation % (Math.PI * 2)) + Math.PI * 2) / SLICE_ARC);
+
+      function stepSpin(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = easeOutQuint(progress);
+
+        const prevRotation = currentRotation;
+        currentRotation = startRotation + (targetRotation - startRotation) * eased;
+
+        // Detect peg crossing top pointer to trigger physical bounce + tick audio
+        const currentPegIndex = Math.floor(currentRotation / SLICE_ARC);
+        if (currentPegIndex !== lastPegIndex) {
+          lastPegIndex = currentPegIndex;
+          const speedRatio = Math.min((currentRotation - prevRotation) * 18, 1.5);
+          pointerVelocity = -Math.min(18 + speedRatio * 14, 32);
+          playTickSound(speedRatio);
+        }
+
+        if (progress < 1) {
+          requestAnimationFrame(stepSpin);
+        } else {
+          // Spin complete
+          currentRotation = targetRotation % (Math.PI * 2);
+          isSpinning = false;
+          centerSpinBtn.disabled = false;
+          mainSpinBtn.disabled = false;
+          shuffleBtn.disabled = false;
+
+          const winner = getWinningSlice();
+          setTimeout(() => showResultModal(winner), 320);
+        }
+      }
+
+      requestAnimationFrame(stepSpin);
+    }
+
+    /**
+     * Show Result Popup & Trigger Confetti / Audio
+     */
+    function showResultModal(slice) {
+      resultIconBadge.textContent = slice.emoji;
+      resultCard.style.borderColor = slice.modalAccent;
+
+      if (slice.isWin) {
+        resultHeaderLabel.textContent = '🎉 Congratulations! You Won 🎉';
+        resultHeaderLabel.className = 'text-xs sm:text-sm font-extrabold uppercase tracking-widest text-amber-300 mb-1';
+        resultTitle.textContent = slice.title;
+        resultSubtitle.textContent = slice.subtitle;
+        modalSpinAgainBtn.textContent = 'SPIN AGAIN';
+        playWinFanfare();
+        launchConfetti();
+      } else {
+        resultHeaderLabel.textContent = 'Better Luck Next Spin!';
+        resultHeaderLabel.className = 'text-xs sm:text-sm font-extrabold uppercase tracking-widest text-rose-300 mb-1';
+        resultTitle.textContent = 'TRY AGAIN';
+        resultSubtitle.textContent = slice.subtitle;
+        modalSpinAgainBtn.textContent = 'TRY AGAIN';
+        playTryAgainTone();
+      }
+
+      resultModal.classList.remove('hidden');
+      resultModal.classList.add('flex');
+    }
+
+    /**
+     * Continuous Animation Loop for Marquee Bulbs & Pointer Spring Physics
+     */
+    function animationLoop(now) {
+      const dt = Math.min((now - lastFrameTime) / 1000, 0.05);
+      lastFrameTime = now;
+
+      // Chase marquee lights faster while spinning
+      const bulbSpeed = isSpinning ? 14 : 2.6;
+      bulbPhase = (bulbPhase + dt * bulbSpeed) % BULB_COUNT;
+
+      // Spring physics for the top pointer flap
+      const springK = 260;
+      const damping = 16;
+      const force = -springK * pointerBounceAngle - damping * pointerVelocity;
+      pointerVelocity += force * dt;
+      pointerBounceAngle += pointerVelocity * dt;
+      wheelPointer.style.transform = `translateX(-50%) rotate(${pointerBounceAngle.toFixed(2)}deg)`;
+
+      renderWheel();
+      requestAnimationFrame(animationLoop);
+    }
+
+    /**
+     * Lightweight Canvas Confetti Celebration
+     */
+    const confettiCanvas = document.getElementById('confettiCanvas');
+    const cCtx = confettiCanvas.getContext('2d');
+    let confettiParticles = [];
+    let confettiAnimating = false;
+
+    function launchConfetti() {
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+      const colors = ['#facc15', '#38bdf8', '#4ade80', '#fb923c', '#f472b6', '#ffffff'];
+
+      confettiParticles = Array.from({ length: 110 }, () => ({
+        x: confettiCanvas.width * (0.2 + secureRandom() * 0.6),
+        y: confettiCanvas.height * 0.45,
+        vx: (secureRandom() - 0.5) * 16,
+        vy: -8 - secureRandom() * 12,
+        size: 6 + secureRandom() * 7,
+        color: colors[Math.floor(secureRandom() * colors.length)],
+        rotation: secureRandom() * 360,
+        vRot: (secureRandom() - 0.5) * 14
+      }));
+
+      if (!confettiAnimating) {
+        confettiAnimating = true;
+        requestAnimationFrame(updateConfetti);
+      }
+    }
+
+    function updateConfetti() {
+      cCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+
+      confettiParticles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.42; // Gravity
+        p.vx *= 0.99;
+        p.rotation += p.vRot;
+
+        cCtx.save();
+        cCtx.translate(p.x, p.y);
+        cCtx.rotate((p.rotation * Math.PI) / 180);
+        cCtx.fillStyle = p.color;
+        cCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+        cCtx.restore();
+      });
+
+      confettiParticles = confettiParticles.filter(p => p.y < confettiCanvas.height + 30);
+
+      if (confettiParticles.length > 0) {
+        requestAnimationFrame(updateConfetti);
+      } else {
+        confettiAnimating = false;
+        cCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      }
+    }
+
+    // Event Listeners
+    centerSpinBtn.addEventListener('click', startSpin);
+    mainSpinBtn.addEventListener('click', startSpin);
+    modalSpinAgainBtn.addEventListener('click', startSpin);
+
+    shuffleBtn.addEventListener('click', () => {
+      if (isSpinning) return;
+      initAudio();
+      shuffleSlicesArray();
+      playTickSound(0.6);
+      renderWheel();
+    });
+
+    soundToggleBtn.addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      soundOnIcon.classList.toggle('hidden', !soundEnabled);
+      soundOffIcon.classList.toggle('hidden', soundEnabled);
+    });
+
+    resultModal.addEventListener('click', (e) => {
+      if (e.target === resultModal) {
+        resultModal.classList.add('hidden');
+        resultModal.classList.remove('flex');
+      }
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (!isSpinning) {
+          startSpin();
+        }
+      } else if (e.code === 'Escape' && !resultModal.classList.contains('hidden')) {
+        resultModal.classList.add('hidden');
+        resultModal.classList.remove('flex');
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      resizeWheelCanvas();
+      renderWheel();
+    });
+
+    // Initialize on load
+    window.onload = function () {
+      resizeWheelCanvas();
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+          renderWheel();
+        });
+      }
+      requestAnimationFrame(animationLoop);
+    };
+  </script>
+</body>
+</html>
